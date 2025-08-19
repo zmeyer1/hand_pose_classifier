@@ -102,10 +102,10 @@ class HandClassifier:
         hand_index = {"left": 0, "right": 1}
 
         hands_found = self.detector.detect(im, is_bgr)
-        if len(hands_found.hand_landmarks) == 0:
+        if not hands_found.multi_hand_landmarks:
             return label, mean_distance
-        for i,hand in enumerate(hands_found.hand_landmarks):
-            handedness = hands_found.handedness[i][0].category_name.lower()
+        for i,hand in enumerate(hands_found.multi_hand_landmarks):
+            # handedness = hands_found.handedness[i][0].category_name.lower()
             angle_vec = detect_hand.generate_angle_vector(hand)
             embedding = self.pca.transform(self.scaler.transform(angle_vec.reshape(1, -1)))
             label, dists = self.get_label(embedding)
@@ -185,14 +185,20 @@ if __name__ == "__main__":
     while cap.isOpened():
         ret, frame = cap.read()
 
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale if needed
+        # convert back
+        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+
         label, dist = classifier.classify(frame, display=True)
+
+        if dist > 10:
+            label = "None"
 
         font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(frame, f"{label} ({np.round(dist,2)})", (50, 50), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
         cv2.imshow('window', frame)
         # reconstuct_skeleton(angles)
-
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):  # Press 'q' to quit
